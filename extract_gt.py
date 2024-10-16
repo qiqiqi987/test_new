@@ -3,6 +3,8 @@ import re
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 from math import radians, sin, cos, sqrt, atan2
+from tabnanny import filename_only
+
 import matplotlib.pyplot as plt
 
 # 定义命名空间
@@ -142,6 +144,32 @@ def read_file_between_timestamps(filename, start_time, end_time):
                 })
     return result
 
+# 新的函数：读取文件中两个时间戳之间的数据，提取时间戳和后四列（经纬度、速度、航向）
+def read_file_with_additional_columns(filename, start_time, end_time):
+    result = []
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+        # print(f"\nData from file {filename} between {start_time} and {end_time}:")
+        for line in lines:
+            line_data = line.strip().split(',')
+            file_time = line_data[0]  # 提取时间戳
+            if compare_time_range(file_time, start_time, end_time):
+                # 提取所需列：时间、经纬度、速度、航向
+                time = line_data[0]
+                lon2 = float(line_data[8])  # 后四列中的经度
+                lat2 = float(line_data[9])  # 后四列中的纬度
+                speed2 = float(line_data[10])  # 后四列中的速度
+                course2 = float(line_data[11])  # 后四列中的航向
+
+                # 将提取的数据存储到结果列表中
+                result.append({
+                    'time': time,
+                    'lon': lon2,
+                    'lat': lat2,
+                    'speed': speed2,
+                    'course': course2
+                })
+    return result
 
 # 计算两点之间的距离（基于经纬度，单位：米）
 def haversine(lon1, lat1, lon2, lat2):
@@ -240,6 +268,48 @@ def plot_speed_and_course(result_kml, result_file):
     plt.tight_layout()
     plt.show()  # 显示图像
 
+# 绘制速度和航向对比图
+def plot_speed_and_course_gnss(result_kml, result_file, result_gnss):
+    kml_speed, kml_course = extract_speed_and_course(result_kml)
+    file_speed, file_course = extract_speed_and_course(result_file)
+    gnss_speed, gnss_course = extract_speed_and_course(result_gnss)
+
+    num_points = len(kml_speed)
+
+    if num_points != len(file_speed) or num_points != len(gnss_speed):
+        print("KML 数据、文件数据和 GNSS 数据的长度不一致，无法绘图。")
+        return
+
+    # 生成横坐标：1, 2, 3, ..., len(kml_speed)
+    x_values = list(range(1, num_points + 1))
+
+    # 绘制图像
+    plt.figure(figsize=(12, 6))
+
+    # 子图 1: 速度对比
+    plt.subplot(1, 2, 1)
+    plt.plot(x_values, kml_speed, label='KML Speed', color='blue')
+    plt.plot(x_values, file_speed, label='File Speed', color='orange')
+    plt.plot(x_values, gnss_speed, label='GNSS Speed', color='green')  # 添加 GNSS Speed
+    plt.title('Speed Comparison')
+    plt.xlabel('Index')
+    plt.ylabel('Speed (m/s)')
+    plt.legend()
+
+    # 子图 2: 航向对比
+    plt.subplot(1, 2, 2)
+    plt.plot(x_values, kml_course, label='KML Course', color='blue')
+    plt.plot(x_values, file_course, label='File Course', color='orange')
+    plt.plot(x_values, gnss_course, label='GNSS Course', color='green')  # 添加 GNSS Course
+    plt.title('Course Comparison')
+    plt.xlabel('Index')
+    plt.ylabel('Course (degrees)')
+    plt.legend()
+
+    # 调整布局并显示图像
+    plt.tight_layout()
+    plt.show()
+
 # 累加 result_file 中的 speed 值
 def sum_file_speed(result_file):
     total_speed = sum([entry['speed'] for entry in result_file])
@@ -274,19 +344,23 @@ def match_files_with_kml(directory, kml_file):
                     # 重新读取文件并打印两个时间戳之间的数据
                     result_file = read_file_between_timestamps(os.path.join(directory, filename), data['time'], new_timestamp)
 
+                    result_gnss = read_file_with_additional_columns(os.path.join(directory, filename), data['time'], new_timestamp)
+
                     # 调用累加函数
                     total_file_speed = sum_file_speed(result_file)
 
                     compare_kml_file_data(result_kml, result_file)
 
                     plot_speed_and_course(result_kml, result_file)
+                    plot_speed_and_course(result_kml, result_gnss)
+                    # plot_speed_and_course_gnss(result_kml, result_file, result_gnss)
 
                     print("-" * 50)
 
 
 # 示例使用
-directory = 'test_data/22113-35170'  # 替换为文件所在目录路径
-kml_file = 'kml/NMPL21420006K_2024-09-30_09-19-02.kml'  # 替换为KML文件路径
+directory = 'test_data/0905/22113-62351'  # 替换为文件所在目录路径
+kml_file = 'kml/NMPL21420006K_2024-09-05_08-54-27.kml'  # 替换为KML文件路径
 
 match_files_with_kml(directory, kml_file)
 
