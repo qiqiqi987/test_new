@@ -269,7 +269,7 @@ def plot_speed_and_course(result_kml, result_file):
     plt.show()  # 显示图像
 
 # 绘制速度和航向对比图
-def plot_speed_and_course_gnss(result_kml, result_file, result_gnss):
+def plot_speed_and_course_gnss(result_kml, result_file, result_gnss, new_timestamp):
     kml_speed, kml_course = extract_speed_and_course(result_kml)
     file_speed, file_course = extract_speed_and_course(result_file)
     gnss_speed, gnss_course = extract_speed_and_course(result_gnss)
@@ -285,6 +285,7 @@ def plot_speed_and_course_gnss(result_kml, result_file, result_gnss):
 
     # 绘制图像
     plt.figure(figsize=(12, 6))
+    plt.title(new_timestamp)
 
     # 子图 1: 速度对比
     plt.subplot(1, 2, 1)
@@ -337,6 +338,7 @@ def match_files_with_kml(directory, kml_file):
                 if new_timestamp:
                     # 打印两个时间戳之间的所有数据
                     print(f"File: {filename}")
+                    print("new_timestamp", new_timestamp)
                     # print(
                     #     f"File Data - Time: {file_time}, Lat: {file_lat}, Lon: {file_lon}, Speed: {file_speed}, Course: {file_course}")
                     result_kml = print_data_between_timestamps(first_lines, kml_data, data['time'], new_timestamp)
@@ -351,16 +353,16 @@ def match_files_with_kml(directory, kml_file):
 
                     compare_kml_file_data(result_kml, result_file)
 
-                    plot_speed_and_course(result_kml, result_file)
-                    plot_speed_and_course(result_kml, result_gnss)
-                    # plot_speed_and_course_gnss(result_kml, result_file, result_gnss)
+                    # plot_speed_and_course(result_kml, result_file)
+                    # plot_speed_and_course(result_kml, result_gnss)
+                    plot_speed_and_course_gnss(result_kml, result_file, result_gnss, new_timestamp)
 
                     print("-" * 50)
 
 
 # 示例使用
-directory = 'test_data/0905/22113-62351'  # 替换为文件所在目录路径
-kml_file = 'kml/NMPL21420006K_2024-09-05_08-54-27.kml'  # 替换为KML文件路径
+directory = 'test_data/0930/22113-35170'  # 替换为文件所在目录路径
+kml_file = 'kml/NMPL21420006K_2024-09-30_03-33-53.kml'  # 替换为KML文件路径
 
 match_files_with_kml(directory, kml_file)
 
